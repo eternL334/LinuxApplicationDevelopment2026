@@ -1,0 +1,43 @@
+06_Tracing
+==========
+
+Сборка: make
+Тесты: make test (нужен strace с error injection)
+Очистка: make clean
+
+./move infile outfile копирует содержимое infile в outfile, заменяя
+старое содержимое. Исходный файл удаляется только после успешного
+копирования и закрытия обоих файлов. При ошибке копирования целевой
+файл удаляется, исходный сохраняется. Одинаковые inode (включая
+жёсткие ссылки) проверяются до очистки целевого файла.
+
+Коды возврата:
+ 0 — успех; 1 — аргументы; 2 — open infile; 3 — fstat infile;
+ 4 — open outfile; 5 — fstat outfile; 6 — одинаковые файлы;
+ 7 — ftruncate; 8 — read; 9 — write; 10 — close outfile;
+11 — close infile; 12 — unlink infile;
+13 — close outfile при уборке; 14 — close infile при уборке;
+15 — unlink outfile при уборке.
+При нескольких ошибках возвращается код последней обнаруженной.
+Если fstat outfile не удался, outfile сохраняется: он может оказаться
+ссылкой на исходный файл. Если удалить outfile не удалось, сообщается
+ошибка 15 и он остаётся на диске. Старое содержимое outfile не восстанавливается.
+Программа рассчитана на обычные файлы без параллельной подмены путей.
+
+Библиотека libprotect.so перехватывает unlink и возвращает EACCES,
+если имя файла содержит PROTECT. Пример без установки:
+  LD_PRELOAD="$PWD/libprotect.so" ./move file_PROTECT result
+После установки: safemove infile outfile.
+Защита относится к unlink; это учебный пример, не механизм безопасности.
+
+Установка: make install DESTDIR=/tmp/package
+Пути задаются BINDIR и LIBDIR во время сборки.
+
+RPM для ALT Linux:
+  rpmbuild -bs tracing-move.spec
+Архив tracing-move-1.0.tar.gz должен быть в каталоге SOURCES rpmbuild.
+Проверка исходного пакета в ALT Linux:
+  hsh --initroot-only ~/hasher
+  hsh ~/hasher tracing-move-1.0-alt1.src.rpm
+
+Исходный код распространяется по лицензии MIT.
